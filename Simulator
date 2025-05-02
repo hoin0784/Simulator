@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>시뮬레이터 룸 예약</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Pretendard', 'Arial', sans-serif;
+      background: #f9fafb;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      margin: 10px 0 5px;
+      font-size: 28px;
+      color: #2c7be5;
+    }
+    .button-container {
+      margin: 15px 0;
+      display: flex;
+      gap: 10px;
+    }
+    .language-btn {
+      background: #2c7be5;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .language-btn:hover { background: #1a68d1; }
+    .date-picker-container { margin: 15px 0; }
+    #date-picker {
+      padding: 10px 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      background: white;
+      appearance: none;
+      outline: none;
+      width: 220px;
+      text-align: center;
+      color: #555;
+    }
+    #instruction {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      margin: 30px 0 10px;
+      font-size: 22px;
+      color: #444;
+      width: 100%;
+      text-align: left;
+      max-width: 1200px;
+    }
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .pc-block {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      transition: transform 0.2s ease;
+    }
+    .pc-block:hover { transform: translateY(-5px); }
+    .pc-block h3 {
+      font-size: 20px;
+      margin-bottom: 15px;
+      color: #444;
+      text-align: center;
+    }
+    .time-slot-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .time-slot {
+      background: #f5f7fa;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+    .time-slot:hover { background: #e0e7ff; }
+    .reserved {
+      background: #c9e4ff;
+      color: #003366;
+      font-weight: bold;
+      border: 1px solid #2c7be5;
+    }
+    .footer {
+      margin-top: 40px;
+      font-size: 13px;
+      color: #999;
+      text-align: center;
+    }
+    .logo {
+      max-width: 120px;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <img src="your_logo_url.png" alt="Company Logo" class="logo">
+
+  <div class="button-container">
+    <button class="language-btn" onclick="changeLanguage('en')">English</button>
+    <button class="language-btn" onclick="changeLanguage('ko')">한국어</button>
+  </div>
+
+  <div class="date-picker-container">
+    <input type="date" id="date-picker" onchange="changeDate()" min="2025-01-01" max="2025-12-31">
+  </div>
+
+  <h1 id="title">시뮬레이터 룸 예약</h1>
+  <p id="instruction">※ 예약을 취소하려면 예약된 칸을 다시 클릭하세요.</p>
+
+  <h2 class="section-title" id="electrode-section">전극 시뮬레이터</h2>
+  <div class="container" id="electrode-container"></div>
+
+  <h2 class="section-title" id="assembly-section">조립 시뮬레이터</h2>
+  <div class="container" id="assembly-container"></div>
+
+  <div class="footer">
+    <p id="footer-text">© 2025 시뮬레이터 예약 시스템</p>
+  </div>
+
+  <script>
+    const electrodePCs = ['PC-1', 'PC-2'];
+    const assemblyPCs = ['PC-1', 'PC-2', 'PC-3', 'PC-4'];
+    const hours = [
+      '08:00~08:30', '08:30~09:00', '09:00~09:30', '09:30~10:00',
+      '10:00~10:30', '10:30~11:00', '11:00~11:30', '11:30~12:00',
+      '12:00~12:30', '12:30~01:00', '01:00~01:30', '01:30~02:00',
+      '02:00~02:30', '02:30~03:00', '03:00~03:30', '03:30~04:00',
+      '04:00~04:30', '04:30~05:00'
+    ];
+
+    let reservations = {};
+    let currentLanguage = 'ko';
+    let selectedDate = new Date().toISOString().split('T')[0];
+    document.getElementById('date-picker').value = selectedDate;
+
+    function changeLanguage(language) {
+      currentLanguage = language;
+      updateLanguage();
+      renderAll();
+    }
+
+    function updateLanguage() {
+      if (currentLanguage === 'en') {
+        document.getElementById('title').textContent = 'Simulator Room Reservation';
+        document.getElementById('instruction').textContent = '※ Click on a reserved slot to cancel.';
+        document.getElementById('footer-text').textContent = '© LH Battery 2025 Simulator Reservation System';
+        document.getElementById('electrode-section').textContent = 'Electrode Simulators';
+        document.getElementById('assembly-section').textContent = 'Assembly Simulators';
+      } else {
+        document.getElementById('title').textContent = '시뮬레이터 룸 예약';
+        document.getElementById('instruction').textContent = '※ 예약을 취소하려면 예약된 칸을 다시 클릭하세요.';
+        document.getElementById('footer-text').textContent = '© LH Battery 2025 시뮬레이터 예약 시스템';
+        document.getElementById('electrode-section').textContent = '전극 시뮬레이터';
+        document.getElementById('assembly-section').textContent = '조립 시뮬레이터';
+      }
+    }
+
+    function changeDate() {
+      selectedDate = document.getElementById('date-picker').value;
+      renderAll();
+    }
+
+    function toggleSlot(slot, pc, hour) {
+      const key = `${selectedDate}_${pc}_${hour}`;
+      if (!slot.classList.contains('reserved')) {
+        const name = prompt(getText('enter_name'));
+        if (name) {
+          const info = prompt(getText('enter_contact'));
+          reservations[key] = { name, info: info || getText('no_info') };
+          slot.textContent = `${hour} - ${name}`;
+          slot.title = info || getText('no_info');
+          slot.classList.add('reserved');
+        }
+      } else {
+        if (confirm(getText('cancel_reservation'))) {
+          delete reservations[key];
+          slot.textContent = hour;
+          slot.title = "";
+          slot.classList.remove('reserved');
+        }
+      }
+    }
+
+    function getText(key) {
+      const texts = {
+        en: {
+          enter_name: 'Enter your name:',
+          enter_contact: 'Enter your contact info (optional):',
+          no_info: 'No additional info',
+          cancel_reservation: 'Do you want to cancel the reservation?'
+        },
+        ko: {
+          enter_name: '이름을 입력하세요:',
+          enter_contact: '연락처를 입력하세요 (선택):',
+          no_info: '추가 정보 없음',
+          cancel_reservation: '예약을 취소하시겠습니까?'
+        }
+      };
+      return texts[currentLanguage][key];
+    }
+
+    function renderPCBlocks(pcs, containerId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      pcs.forEach((pc) => {
+        const block = document.createElement('div');
+        block.className = 'pc-block';
+        const title = document.createElement('h3');
+        title.textContent = pc;
+        block.appendChild(title);
+
+        const slotContainer = document.createElement('div');
+        slotContainer.className = 'time-slot-container';
+
+        hours.forEach(hour => {
+          const slot = document.createElement('div');
+          slot.className = 'time-slot';
+          slot.dataset.hour = hour;
+          slot.dataset.pc = pc;
+
+          const key = `${selectedDate}_${pc}_${hour}`;
+          if (reservations[key]) {
+            slot.textContent = `${hour} - ${reservations[key].name}`;
+            slot.title = reservations[key].info;
+            slot.classList.add('reserved');
+          } else {
+            slot.textContent = hour;
+          }
+
+          slot.onclick = function () {
+            toggleSlot(slot, pc, hour);
+          };
+
+          slotContainer.appendChild(slot);
+        });
+
+        block.appendChild(slotContainer);
+        container.appendChild(block);
+      });
+    }
+
+    function renderAll() {
+      renderPCBlocks(electrodePCs, 'electrode-container');
+      renderPCBlocks(assemblyPCs, 'assembly-container');
+    }
+
+    updateLanguage();
+    renderAll();
+  </script>
+</body>
+</html>
